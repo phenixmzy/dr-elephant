@@ -30,10 +30,12 @@ import org.apache.spark.SparkConf
 import org.apache.spark.scheduler.{ApplicationEventListener, ReplayListenerBus, StageInfo}
 import org.apache.spark.storage.{RDDInfo, StorageStatus, StorageStatusListener, StorageStatusTrackingListener}
 import org.apache.spark.ui.env.EnvironmentListener
-import org.apache.spark.ui.exec.ExecutorsListener
+import org.apache.spark.ui.exec.{ExecutorsListener}
 import org.apache.spark.ui.jobs.JobProgressListener
 import org.apache.spark.ui.storage.StorageListener
 import org.apache.spark.util.collection.OpenHashSet
+
+import org.apache.spark.ui.ExecutorTaskSummaryWrapper
 
 /**
  * This class wraps the logic of collecting the data in SparkEventListeners into the
@@ -45,12 +47,12 @@ import org.apache.spark.util.collection.OpenHashSet
  */
 class SparkDataCollection extends SparkApplicationData {
   import SparkDataCollection._
-
+  val sparkConf = new SparkConf()
   lazy val applicationEventListener = new ApplicationEventListener()
-  lazy val jobProgressListener = new JobProgressListener(new SparkConf())
+  lazy val jobProgressListener = new JobProgressListener(sparkConf)
   lazy val environmentListener = new EnvironmentListener()
-  lazy val storageStatusListener = new StorageStatusListener()
-  lazy val executorsListener = new ExecutorsListener(storageStatusListener)
+  lazy val storageStatusListener = new StorageStatusListener(sparkConf)
+  lazy val executorsListener = new ExecutorsListener(storageStatusListener, sparkConf)
   lazy val storageListener = new StorageListener(storageStatusListener)
 
   // This is a customized listener that tracks peak used memory
@@ -164,10 +166,10 @@ class SparkDataCollection extends SparkApplicationData {
     if (_executorData == null) {
       _executorData = new SparkExecutorData()
 
-      for (statusId <- 0 until executorsListener.storageStatusList.size) {
+      for (statusId <- 0 until executorsListener.activeStorageStatusList.size) {
         val info = new ExecutorInfo()
 
-        val status = executorsListener.storageStatusList(statusId)
+        val status = executorsListener.activeStorageStatusList(statusId)
 
         info.execId = status.blockManagerId.executorId
         info.hostPort = status.blockManagerId.hostPort
@@ -178,7 +180,19 @@ class SparkDataCollection extends SparkApplicationData {
         info.memUsed = storageStatusTrackingListener.executorIdToMaxUsedMem.getOrElse(info.execId, 0L)
         info.maxMem = status.maxMem
         info.diskUsed = status.diskUsed
-        info.activeTasks = executorsListener.executorToTasksActive.getOrElse(info.execId, 0)
+
+        val executorTaskSummary = new ExecutorTaskSummaryWrapper(executorsListener.executorToTaskSummary)
+
+        info.activeTasks = executorTaskSummary.tasksActive(info.execId)
+        info.failedTasks = executorTaskSummary.tasksFailed(info.execId)
+        info.completedTasks = executorTaskSummary.tasksComplete(info.execId)
+        info.totalTasks = info.activeTasks + info.failedTasks + info.completedTasks
+        info.duration = executorTaskSummary.duration(info.execId)
+        info.inputBytes = executorTaskSummary.inputBytes(info.execId)
+        info.shuffleRead = executorTaskSummary.shuffleRead(info.execId)
+        info.shuffleWrite = executorTaskSummary.shuffleWrite(info.execId)
+
+        /*info.activeTasks = executorsListener.executorToTasksActive.getOrElse(info.execId, 0)
         info.failedTasks = executorsListener.executorToTasksFailed.getOrElse(info.execId, 0)
         info.completedTasks = executorsListener.executorToTasksComplete.getOrElse(info.execId, 0)
         info.totalTasks = info.activeTasks + info.failedTasks + info.completedTasks
@@ -186,7 +200,7 @@ class SparkDataCollection extends SparkApplicationData {
         info.inputBytes = executorsListener.executorToInputBytes.getOrElse(info.execId, 0L)
         info.shuffleRead = executorsListener.executorToShuffleRead.getOrElse(info.execId, 0L)
         info.shuffleWrite = executorsListener.executorToShuffleWrite.getOrElse(info.execId, 0L)
-
+*/
         _executorData.setExecutorInfo(info.execId, info)
       }
     }

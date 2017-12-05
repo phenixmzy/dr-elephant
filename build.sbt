@@ -19,11 +19,11 @@ import Dependencies._
 
 name := "dr-elephant"
 
-version := "2.0.13"
+version := "2.0.13-with-spark2"
 
 organization := "com.linkedin.drelephant"
 
-javacOptions in Compile ++= Seq("-source", "1.6", "-target", "1.6")
+javacOptions in Compile ++= Seq("-source", "1.8", "-target", "1.8")
 
 libraryDependencies ++= dependencies map { _.excludeAll(exclusionRules: _*) }
 
