@@ -100,27 +100,41 @@ trait SparkUtils {
     * @return a tuple (Path, Option[CompressionCodec]) for the specific event log file and the codec to use
     */
   def pathAndCodecforEventLog(
-    sparkConf: SparkConf,
-    fs: FileSystem,
-    basePath: Path,
-    appId: String,
-    attemptId: Option[String]
-  ): (Path, Option[CompressionCodec]) = {
+                               sparkConf: SparkConf,
+                               fs: FileSystem,
+                               basePath: Path,
+                               appId: String,
+                               attemptId: Option[String]
+                             ): (Path, Option[CompressionCodec]) = {
     attemptId match {
       // if attemptid is given, use the existing method
       case x: Some[String] => { val path = {
-          val shouldUseCompression = sparkConf.getBoolean(SPARK_EVENT_LOG_COMPRESS_KEY, defaultValue = false)
-          val compressionCodecShortName =
-            if (shouldUseCompression) Some(shortNameOfCompressionCodec(compressionCodecFromConf(sparkConf))) else None
-          getLogPath(fs.getUri.resolve(basePath.toUri), appId, attemptId, compressionCodecShortName)
-        }
-          val codec = compressionCodecForLogName(sparkConf, path.getName())
-          (path, codec)
+        val shouldUseCompression = sparkConf.getBoolean(SPARK_EVENT_LOG_COMPRESS_KEY, defaultValue = false)
+        val compressionCodecShortName =
+          if (shouldUseCompression) Some(shortNameOfCompressionCodec(compressionCodecFromConf(sparkConf))) else None
+        logger.info(s"Using compressionCodecShortName: ${compressionCodecShortName}")
+        logger.info(s"Using shouldUseCompression: ${shouldUseCompression}")
+        getLogPath(fs.getUri.resolve(basePath.toUri), appId, attemptId, compressionCodecShortName)
+      }
+        val codec = compressionCodecForLogName(sparkConf, path.getName())
+        logger.info(s"The application path: ${path}")
+        (path, codec)
       }
       case None => {
-        val (logPath, codecName) = getLogPathAndCodecName(fs, fs.getUri.resolve(basePath.toUri), appId)
-
-        (logPath, Some(compressionCodecMap.getOrElseUpdate(codecName, loadCompressionCodec(sparkConf, codecName))))
+        /**
+          *val (logPath, codecName) = getLogPathAndCodecName(fs, fs.getUri.resolve(basePath.toUri), appId)
+          *logger.info(s"The application logPath: ${logPath} and codecName: ${codecName}")
+          *(logPath, Some(compressionCodecMap.getOrElseUpdate(codecName, loadCompressionCodec(sparkConf, codecName))))
+          */
+        val shouldUseCompression = sparkConf.getBoolean(SPARK_EVENT_LOG_COMPRESS_KEY, defaultValue = false)
+        if (shouldUseCompression) {
+          val (logPath, codecName) = getLogPathAndCodecName(fs, fs.getUri.resolve(basePath.toUri), appId)
+          (logPath, Some(compressionCodecMap.getOrElseUpdate(codecName, loadCompressionCodec(sparkConf, codecName))))
+        } else {
+          val logPath = getLogPathAndNoCompression(fs, fs.getUri.resolve(basePath.toUri), appId)
+          logger.info(s"spark.eventLog.compress is ${shouldUseCompression} and the logPath is :" + logPath)
+          (logPath, None)
+        }
       }
     }
 
@@ -155,6 +169,7 @@ trait SparkUtils {
 
   /** Load properties present in the given file. */
   def getPropertiesFromFile(filename: String): Map[String, String] = {
+    logger.info(s"The PropertiesFromFile: ${filename}")
     val file = new File(filename)
     require(file.exists(), s"Properties file $file does not exist")
     require(file.isFile(), s"Properties file $file is not a normal file")
@@ -221,6 +236,7 @@ trait SparkUtils {
   }
 
   private def splitLogPath( logPath: String) : (Option[String],Option[String],Option[String]) = {
+    logger.info(s"splitLogPath logPath: ${logPath}")
     var extension: Option[String] = None
     var attempt: Option[String] = None
     var appId: Option[String] = None
@@ -235,17 +251,28 @@ trait SparkUtils {
       } else {
         appId = Some(name)
       }
+    } else {
+      val appIdAndAttempt = logPath.split('_')
+      if( appIdAndAttempt.length == 4 ) {
+        attempt = Some(appIdAndAttempt(3))
+        appId = Some(appIdAndAttempt.dropRight(1).mkString("_"))
+      } else {
+        appId = Some(logPath)
+      }
+      // attempt = Some(appIdAndAttempt(3))
     }
+    logger.info(s"splitLogPath if the spark.eventLog.compress is false, extension will be None. appId: ${appId}, attempt: ${attempt}, extension:${extension}")
+
     (appId, attempt, extension)
   }
   private def getLogPathAndCodecName(
-                                    fs: FileSystem,
-                                    logBaseDir: URI,
-                                    appId: String
+                                      fs: FileSystem,
+                                      logBaseDir: URI,
+                                      appId: String
                                     ): (Path, String) = {
     val base = logBaseDir.toString.stripSuffix("/");
     val filter = new PathFilter() {
-       override def accept(file: Path): Boolean = {
+      override def accept(file: Path): Boolean = {
         file.getName().startsWith(appId);
       }
     }
@@ -254,29 +281,82 @@ trait SparkUtils {
       case 0 => throw new FileNotFoundException(s"logfile does not exist for ${appId}.")
       case 1 => splitLogPath(attemptsList(0).getPath().getName())
       case _ => attemptsList.
-                        map( x => splitLogPath(x.getPath().getName())).
-                        sortWith( (x,y) => x._2.getOrElse("-1").toInt > y._2.getOrElse("-1").toInt ).
-                        head
+        map( x => splitLogPath(x.getPath().getName())).
+        sortWith( (x,y) => x._2.getOrElse("-1").toInt > y._2.getOrElse("-1").toInt ).
+        head
     }
+
+    logger.info(s"The finalAttempt: ${finalAttempt}")
 
     finalAttempt match {
       // if attemptId is none and the codec is available, use the appid with no attemptid suffix
       case noAttempt if noAttempt._1 != None & noAttempt._2 == None & noAttempt._3 != None =>
-                                                          (new Path(base +
-                                                              "/" + finalAttempt._1.get +
-                                                              "." + finalAttempt._3.get), finalAttempt._3.get)
+        (new Path(base +
+          "/" + finalAttempt._1.get +
+          "." + finalAttempt._3.get), finalAttempt._3.get)
       // if attemptId is available and the codec is available, use the appid with attemptid suffix
       case attempt if attempt._1 != None & attempt._2 != None & attempt._3 != None =>
-                                                          (new Path(base +
-                                                                "/" + attempt._1.get +
-                                                                "_" + sanitize(finalAttempt._2.get) +
-                                                                "." + finalAttempt._3.get), finalAttempt._3.get)
+        (new Path(base +
+          "/" + attempt._1.get +
+          "_" + sanitize(finalAttempt._2.get) +
+          "." + finalAttempt._3.get), finalAttempt._3.get)
+
       // if codec is not available, but we found a file match with appId, use the actual file Path from the first match
       case nocodec if nocodec._1 != None & nocodec._3 == None => (attemptsList(0).getPath(), DEFAULT_COMPRESSION_CODEC)
 
       // This should be reached only if we can't parse the filename in the path.
       // Try to construct a general path in that case.
-      case _ => (new Path(base + "/" + appId + "." + DEFAULT_COMPRESSION_CODEC), DEFAULT_COMPRESSION_CODEC)
+      case _ => {
+        logger.info("This should be reached only if we can't parse the filename in the path.Try to construct a general path in that case.")
+        val path_code = (new Path(base + "/" + appId + "." + DEFAULT_COMPRESSION_CODEC), DEFAULT_COMPRESSION_CODEC)
+        logger.info(s"${path_code}")
+        path_code
+      }
+    }
+  }
+
+  private def getLogPathAndNoCompression(
+                                          fs: FileSystem,
+                                          logBaseDir: URI,
+                                          appId: String
+                                        ): Path = {
+    val base = logBaseDir.toString.stripSuffix("/");
+    val filter = new PathFilter() {
+      override def accept(file: Path): Boolean = {
+        file.getName().startsWith(appId);
+      }
+    }
+    val attemptsList = fs.listStatus(new Path(base), filter)
+    val finalAttempt = attemptsList.length match {
+      case 0 => throw new FileNotFoundException(s"logfile does not exist for ${appId} and no compression.")
+      case 1 => splitLogPath(attemptsList(0).getPath().getName())
+      case _ => attemptsList.
+        map( x => splitLogPath(x.getPath().getName())).
+        sortWith( (x,y) => x._2.getOrElse("-1").toInt > y._2.getOrElse("-1").toInt ).
+        head
+    }
+    val attemptsListSize = attemptsList.length
+    logger.info(s"The base: ${base}")
+    logger.info(s"The attemptsListSize: ${attemptsListSize}")
+    logger.info(s"The finalAttempt: ${finalAttempt}")
+
+    finalAttempt match {
+      // if attemptId is none and the codec is available, use the appid with no attemptid suffix
+      case noAttempt if noAttempt._1 != None & noAttempt._2 == None & noAttempt._3 != None =>
+        new Path(base + "/" + finalAttempt._1.get)
+      // if attemptId is available and the codec is available, use the appid with attemptid suffix
+      case attempt if attempt._1 != None & attempt._2 != None & attempt._3 != None =>
+        new Path(base + "/" + attempt._1.get + "_" + sanitize(finalAttempt._2.get))
+
+      case attemptNoCodec if attemptNoCodec._1 != None & attemptNoCodec._2 != None & attemptNoCodec._3 == None =>
+        new Path(base + "/" + attemptNoCodec._1.get + "_" + sanitize(finalAttempt._2.get))
+
+      // if codec is not available, but we found a file match with appId, use the actual file Path from the first match
+      case nocodec if nocodec._1 != None & nocodec._3 == None => (attemptsList(0).getPath())
+
+      // This should be reached only if we can't parse the filename in the path.
+      // Try to construct a general path in that case.
+      case _ => new Path(base + "/" + appId)
     }
   }
 
@@ -285,7 +365,7 @@ trait SparkUtils {
                           appId: String,
                           appAttemptId: Option[String],
                           compressionCodecName: Option[String] = None
-                          ): Path = {
+                        ): Path = {
     val base = logBaseDir.toString.stripSuffix("/") + "/" + sanitize(appId)
     val codec = compressionCodecName.map("." + _).getOrElse("")
     if (appAttemptId.isDefined) {
