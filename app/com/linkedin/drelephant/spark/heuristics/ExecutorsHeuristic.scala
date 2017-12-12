@@ -18,13 +18,13 @@ package com.linkedin.drelephant.spark.heuristics
 
 import scala.collection.JavaConverters
 import scala.collection.mutable.ArrayBuffer
-
 import com.linkedin.drelephant.analysis.{Heuristic, HeuristicResult, HeuristicResultDetails, Severity, SeverityThresholds}
 import com.linkedin.drelephant.configurations.heuristic.HeuristicConfigurationData
 import com.linkedin.drelephant.math.Statistics
 import com.linkedin.drelephant.spark.data.SparkApplicationData
 import com.linkedin.drelephant.spark.fetchers.statusapiv1.ExecutorSummary
-import com.linkedin.drelephant.util.MemoryFormatUtils
+import com.linkedin.drelephant.util.{MemoryFormatUtils, Utils}
+import org.apache.log4j.Logger
 
 
 /**
@@ -38,6 +38,7 @@ class ExecutorsHeuristic(private val heuristicConfigurationData: HeuristicConfig
     extends Heuristic[SparkApplicationData] {
   import ExecutorsHeuristic._
   import JavaConverters._
+
 
   val maxToMedianRatioSeverityThresholds: SeverityThresholds =
     SeverityThresholds.parse(heuristicConfigurationData.getParamMap.get(MAX_TO_MEDIAN_RATIO_SEVERITY_THRESHOLDS_KEY), ascending = true)
@@ -56,6 +57,16 @@ class ExecutorsHeuristic(private val heuristicConfigurationData: HeuristicConfig
   override def getHeuristicConfData(): HeuristicConfigurationData = heuristicConfigurationData
 
   override def apply(data: SparkApplicationData): HeuristicResult = {
+
+    def loadParameters : Unit = {
+      val paramMap = heuristicConfigurationData.getParamMap
+      val heuristicName = heuristicConfigurationData.getHeuristicName
+      val confMemRatioLimits = Utils.getParam(paramMap.get(STORAGE_MEM_RATIO_SEVERITY), storageMemRatioLimits.length)
+      if (confMemRatioLimits != null) storageMemRatioLimits = confMemRatioLimits
+      logger.info(heuristicName + " will use " + STORAGE_MEM_RATIO_SEVERITY + " with the following threshold settings: " + storageMemRatioLimits.toString)
+    }
+
+    loadParameters
     val evaluator = new Evaluator(this, data)
 
     def formatDistribution(distribution: Distribution, longFormatter: Long => String, separator: String = ", "): String = {
@@ -122,11 +133,14 @@ class ExecutorsHeuristic(private val heuristicConfigurationData: HeuristicConfig
     )
     result
   }
+
 }
 
 object ExecutorsHeuristic {
   import JavaConverters._
   import scala.concurrent.duration._
+
+  private val logger: Logger = Logger.getLogger(classOf[ExecutorsHeuristic])
 
   val DEFAULT_MAX_TO_MEDIAN_RATIO_SEVERITY_THRESHOLDS: SeverityThresholds = SeverityThresholds(
     low = math.pow(10, 0.125), // ~1.334
@@ -135,6 +149,8 @@ object ExecutorsHeuristic {
     critical = 10,
     ascending = true
   )
+
+  private var storageMemRatioLimits = Array(0.6d, 0.5d, 0.4d, 0.3d)
 
   val DEFAULT_IGNORE_MAX_BYTES_LESS_THAN_THRESHOLD: Long = MemoryFormatUtils.stringToBytes("100 MB")
 
@@ -145,6 +161,8 @@ object ExecutorsHeuristic {
   val IGNORE_MAX_BYTES_LESS_THAN_THRESHOLD_KEY: String = "ignore_max_bytes_less_than_threshold"
 
   val IGNORE_MAX_MILLIS_LESS_THAN_THRESHOLD_KEY: String = "ignore_max_millis_less_than_threshold"
+
+  private val STORAGE_MEM_RATIO_SEVERITY: String = "storage_memory_ratio_severity"
 
   class Evaluator(executorsHeuristic: ExecutorsHeuristic, data: SparkApplicationData) {
     lazy val executorSummaries: Seq[ExecutorSummary] = data.executorSummaries
@@ -187,12 +205,15 @@ object ExecutorsHeuristic {
     lazy val shuffleWriteBytesSeverity: Severity =
       severityOfDistribution(shuffleWriteBytesDistribution, ignoreMaxBytesLessThanThreshold)
 
+    lazy val storageMemoryUtilizationRateSeverity: Severity = getStorageMemoryRatioSeverity(storageMemoryUtilizationRate)
+
     lazy val severity: Severity = Severity.max(
       storageMemoryUsedSeverity,
       taskTimeSeverity,
       inputBytesSeverity,
       shuffleReadBytesSeverity,
-      shuffleWriteBytesSeverity
+      shuffleWriteBytesSeverity,
+      storageMemoryUtilizationRateSeverity
     )
 
     private[heuristics] def severityOfDistribution(
@@ -208,6 +229,9 @@ object ExecutorsHeuristic {
         severityThresholds.severityOf(BigDecimal(distribution.max) / BigDecimal(distribution.median))
       }
     }
+
+    private[heuristics] def getStorageMemoryRatioSeverity(ratio: Double) = Severity.getSeverityDescending(ratio, storageMemRatioLimits(0), storageMemRatioLimits(1), storageMemRatioLimits(2), storageMemRatioLimits(3))
+
 
     private lazy val maxToMedianRatioSeverityThresholds = executorsHeuristic.maxToMedianRatioSeverityThresholds
 
