@@ -95,6 +95,10 @@ class ConfigurationHeuristic(private val heuristicConfigurationData: HeuristicCo
       result.addResultDetail(SPARK_SHUFFLE_SERVICE_ENABLED, formatProperty(evaluator.isShuffleServiceEnabled.map(_.toString)),
       "Spark shuffle service is not enabled.")
     }
+    if (evaluator.rddCompressSeverity != Severity.NONE) {
+      result.addResultDetail(SPARK_RDD_COMPRESS, formatProperty(evaluator.isRddCompressEnable.map(_.toString)),
+        "Spark Rdd Compress is not enabled.")
+    }
     result
   }
 }
@@ -104,7 +108,7 @@ object ConfigurationHeuristic {
   val DEFAULT_SERIALIZER_IF_NON_NULL_SEVERITY_IF_RECOMMENDATION_UNMET = Severity.MODERATE
 
   val SERIALIZER_IF_NON_NULL_RECOMMENDATION_KEY = "serializer_if_non_null_recommendation"
-
+  val RDD_COMPRESS_IF_NON_NULL_RECOMMENDATION_KEY = "rdd_compress_if_non_null_recommendation"
   val SPARK_DRIVER_MEMORY_KEY = "spark.driver.memory"
   val SPARK_EXECUTOR_MEMORY_KEY = "spark.executor.memory"
   val SPARK_EXECUTOR_INSTANCES_KEY = "spark.executor.instances"
@@ -113,6 +117,7 @@ object ConfigurationHeuristic {
   val SPARK_APPLICATION_DURATION = "spark.application.duration"
   val SPARK_SHUFFLE_SERVICE_ENABLED = "spark.shuffle.service.enabled"
   val SPARK_DYNAMIC_ALLOCATION_ENABLED = "spark.dynamicAllocation.enabled"
+  val SPARK_RDD_COMPRESS = "spark.rdd.compress"
 
   class Evaluator(configurationHeuristic: ConfigurationHeuristic, data: SparkApplicationData) {
     lazy val appConfigurationProperties: Map[String, String] =
@@ -137,7 +142,6 @@ object ConfigurationHeuristic {
     }
 
     lazy val serializer: Option[String] = getProperty(SPARK_SERIALIZER_KEY)
-
     /**
      * If the serializer is either not configured or not equal to KryoSerializer, then the severity will be moderate.
      */
@@ -148,6 +152,9 @@ object ConfigurationHeuristic {
       case Some(_) => DEFAULT_SERIALIZER_IF_NON_NULL_SEVERITY_IF_RECOMMENDATION_UNMET
     }
 
+    lazy val rddCompressSeverity: Severity = if (isRddCompressEnable.get) Severity.NONE else Severity.MODERATE
+
+
     /**
      * The following logic computes severity based on shuffle service and dynamic allocation flags.
      * If dynamic allocation is disabled, then the severity will be MODERATE if shuffle service is disabled or not specified.
@@ -156,6 +163,7 @@ object ConfigurationHeuristic {
 
     lazy val isDynamicAllocationEnabled: Option[Boolean] = Some(getProperty(SPARK_DYNAMIC_ALLOCATION_ENABLED).exists(_.toBoolean == true))
     lazy val isShuffleServiceEnabled: Option[Boolean] = Some(getProperty(SPARK_SHUFFLE_SERVICE_ENABLED).exists(_.toBoolean == true))
+    lazy val isRddCompressEnable: Option[Boolean] = Some(getProperty(SPARK_RDD_COMPRESS).exists(_.toBoolean == true))
 
     lazy val shuffleAndDynamicAllocationSeverity = (isDynamicAllocationEnabled, isShuffleServiceEnabled) match {
       case (_, Some(true)) => Severity.NONE
@@ -166,7 +174,6 @@ object ConfigurationHeuristic {
     lazy val severity: Severity = Severity.max(serializerSeverity, shuffleAndDynamicAllocationSeverity)
 
     private val serializerIfNonNullRecommendation: String = configurationHeuristic.serializerIfNonNullRecommendation
-
     private def getProperty(key: String): Option[String] = appConfigurationProperties.get(key)
   }
 }

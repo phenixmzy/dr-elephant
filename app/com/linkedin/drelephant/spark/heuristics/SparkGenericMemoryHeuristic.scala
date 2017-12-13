@@ -3,6 +3,7 @@ package com.linkedin.drelephant.spark.heuristics
 import com.linkedin.drelephant.analysis.{Heuristic, HeuristicResult, Severity}
 import com.linkedin.drelephant.configurations.heuristic.HeuristicConfigurationData
 import com.linkedin.drelephant.spark.data.SparkApplicationData
+import com.linkedin.drelephant.util.Utils
 import org.apache.log4j.Logger
 
 /**
@@ -13,7 +14,7 @@ class SparkGenericMemoryHeuristic (private val heuristicConfigurationData: Heuri
   import SparkGenericMemoryHeuristic._
 
   private var storageMemRatioLimits = Array(0.6d, 0.5d, 0.4d, 0.3d)
-  private var _heuristicConfData = null
+
 
   override def apply(data: SparkApplicationData): HeuristicResult = {
     val evaluator = new Evaluator(this, data)
@@ -26,6 +27,13 @@ class SparkGenericMemoryHeuristic (private val heuristicConfigurationData: Heuri
 
   override def getHeuristicConfData(): HeuristicConfigurationData = heuristicConfigurationData
 
+  private def loadParameters {
+    val paramMap = heuristicConfigurationData.getParamMap
+    val heuristicName = heuristicConfigurationData.getHeuristicName
+    val confMemRatioLimits = Utils.getParam(paramMap.get(STORAGE_MEM_RATIO_SEVERITY), storageMemRatioLimits.length)
+    if (confMemRatioLimits != null) storageMemRatioLimits = confMemRatioLimits
+    logger.info(heuristicName + " will use " + STORAGE_MEM_RATIO_SEVERITY)
+  }
 
 }
 
