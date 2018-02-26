@@ -180,6 +180,9 @@
     <heuristicname>Spark Executor Metrics</heuristicname>
     <classname>com.linkedin.drelephant.spark.heuristics.ExecutorsHeuristic</classname>
     <viewname>views.html.help.spark.helpExecutorsHeuristic</viewname>
+    <!--<params>
+      <storage_memory_ratio_severity>0.6, 0.5, 0.4, 0.3</storage_memory_ratio_severity>
+    </params>-->
   </heuristic>
   <heuristic>
     <applicationtype>spark</applicationtype>
@@ -193,5 +196,10 @@
     <classname>com.linkedin.drelephant.spark.heuristics.StagesHeuristic</classname>
     <viewname>views.html.help.spark.helpStagesHeuristic</viewname>
   </heuristic>
-
+  <heuristic>
+    <applicationtype>spark</applicationtype>
+    <heuristicname>Executor GC</heuristicname>
+    <classname>com.linkedin.drelephant.spark.heuristics.ExecutorGcHeuristic</classname>
+    <viewname>views.html.help.spark.helpExecutorGcHeuristic</viewname>
+  </heuristic>
 </heuristics>
