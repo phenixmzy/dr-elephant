@@ -186,6 +186,12 @@
   </heuristic>
   <heuristic>
     <applicationtype>spark</applicationtype>
+    <heuristicname>Spark Executor GC</heuristicname>
+    <classname>com.linkedin.drelephant.spark.heuristics.ExecutorGcHeuristic</classname>
+    <viewname>views.html.help.spark.helpExecutorGcHeuristic</viewname>
+  </heuristic>
+  <heuristic>
+    <applicationtype>spark</applicationtype>
     <heuristicname>Spark Job Metrics</heuristicname>
     <classname>com.linkedin.drelephant.spark.heuristics.JobsHeuristic</classname>
     <viewname>views.html.help.spark.helpJobsHeuristic</viewname>
@@ -198,8 +204,8 @@
   </heuristic>
   <heuristic>
     <applicationtype>spark</applicationtype>
-    <heuristicname>Executor GC</heuristicname>
-    <classname>com.linkedin.drelephant.spark.heuristics.ExecutorGcHeuristic</classname>
+    <heuristicname>Spark Stage Skew</heuristicname>
+    <classname>com.linkedin.drelephant.spark.heuristics.StageSkewHeuristic</classname>
     <viewname>views.html.help.spark.helpExecutorGcHeuristic</viewname>
   </heuristic>
 </heuristics>

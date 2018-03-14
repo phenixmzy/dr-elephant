@@ -18,12 +18,13 @@ package com.linkedin.drelephant.spark.legacydata
 
 import java.util.Date
 
-import scala.collection.JavaConverters
-import scala.util.Try
-
 import com.linkedin.drelephant.spark.fetchers.statusapiv1._
+import org.apache.log4j.Logger
 import org.apache.spark.JobExecutionStatus
 import org.apache.spark.status.api.v1.StageStatus
+
+import scala.collection.JavaConverters
+import scala.util.Try
 
 /**
   * Converters for legacy SparkApplicationData to current SparkApplicationData.
@@ -31,6 +32,8 @@ import org.apache.spark.status.api.v1.StageStatus
   * The converters make a best effort, providing default values for attributes the legacy data doesn't provide.
   * In practice, the Dr. Elephant Spark heuristics end up using a relatively small subset of the converted data.
   */
+
+
 object LegacyDataConverters {
   import JavaConverters._
 
@@ -110,6 +113,60 @@ object LegacyDataConverters {
 
     def extractStageData(stageAttemptId: SparkJobProgressData.StageAttemptId): StageDataImpl = {
       val stageInfo = jobProgressData.getStageInfo(stageAttemptId.stageId, stageAttemptId.attemptId)
+      var stageTasks = scala.collection.mutable.Map[Long, TaskDataImpl]()
+
+      val taskDatas = JavaConverters.mapAsScalaMapConverter(stageInfo.tasks).asScala.toMap
+      taskDatas.foreach(item => {
+        val id = item._1
+        val taskData = item._2
+        val taskMet = taskData.taskMetrics
+
+        val inputMetricsImpl =
+          if (taskMet.inputMetrics != null) Some(new InputMetricsImpl(taskMet.inputMetrics.bytesRead,taskMet.inputMetrics.recordsRead)) else None
+
+        val shuffleReadImpl = if (taskMet.shuffleReadMetrics != null)
+          Some(
+            new ShuffleReadMetricsImpl(taskMet.shuffleReadMetrics.remoteBlocksFetched,taskMet.shuffleReadMetrics.localBlocksFetched,
+              taskMet.shuffleReadMetrics.fetchWaitTime,taskMet.shuffleReadMetrics.remoteBytesRead,
+              taskMet.shuffleReadMetrics.localBytesRead,taskMet.shuffleReadMetrics.totalBlocksFetched,
+              taskMet.shuffleReadMetrics.recordsRead)
+          ) else None
+
+        val shuffleWriteImpl = if (taskMet.shuffleWriteMetrics != null)
+          Some(new ShuffleWriteMetricsImpl(taskMet.shuffleWriteMetrics.bytesWritten,taskMet.shuffleWriteMetrics.writeTime,taskMet.shuffleWriteMetrics.recordsWritten))
+        else None
+
+        val taskMetricsImpl = new TaskMetricsImpl(
+          taskMet.executorDeserializeTime,
+          taskMet.executorRunTime,
+          taskMet.resultSize,
+          taskMet.jvmGcTime,
+          taskMet.resultSerializationTime,
+          taskMet.memoryBytesSpilled,
+          taskMet.diskBytesSpilled,
+          inputMetrics = inputMetricsImpl,
+          outputMetrics = None,
+          shuffleReadMetrics = shuffleReadImpl,
+          shuffleWriteMetrics = shuffleWriteImpl
+        )
+
+        val taskDataImpl = new TaskDataImpl(
+          taskData.taskId,
+          taskData.index,
+          taskData.attempt,
+          new Date(taskData.launchTime),
+          taskData.duration,
+          taskData.executorId,
+          taskData.host,
+          taskData.taskLocality,
+          taskData.speculative,
+          accumulatorUpdates = Seq(),
+          errorMessage = None,
+          taskMetrics = Some(taskMetricsImpl)
+        )
+        stageTasks(id) = taskDataImpl
+      })
+
       new StageDataImpl(
         extractStageStatus(stageAttemptId),
         stageAttemptId.stageId,
@@ -132,7 +189,7 @@ object LegacyDataConverters {
         stageInfo.description,
         schedulingPool = "",
         accumulatorUpdates = Seq.empty,
-        tasks = None,
+        tasks = Some(stageTasks),
         executorSummary = None
       )
     }

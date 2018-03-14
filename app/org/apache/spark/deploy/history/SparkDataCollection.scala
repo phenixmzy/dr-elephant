@@ -17,24 +17,21 @@
 package org.apache.spark.deploy.history
 
 import java.io.InputStream
-import java.util.{Set => JSet, Properties, List => JList, HashSet => JHashSet, ArrayList => JArrayList}
+import java.util.{HashMap, Properties, ArrayList => JArrayList, HashSet => JHashSet, List => JList, Set => JSet}
 
 import scala.collection.mutable
-
 import com.linkedin.drelephant.analysis.ApplicationType
 import com.linkedin.drelephant.spark.legacydata._
 import com.linkedin.drelephant.spark.legacydata.SparkExecutorData.ExecutorInfo
-import com.linkedin.drelephant.spark.legacydata.SparkJobProgressData.JobInfo
-
+import com.linkedin.drelephant.spark.legacydata.SparkJobProgressData._
 import org.apache.spark.SparkConf
 import org.apache.spark.scheduler.{ApplicationEventListener, ReplayListenerBus, StageInfo}
 import org.apache.spark.storage.{RDDInfo, StorageStatus, StorageStatusListener, StorageStatusTrackingListener}
 import org.apache.spark.ui.env.EnvironmentListener
-import org.apache.spark.ui.exec.{ExecutorsListener}
+import org.apache.spark.ui.exec.ExecutorsListener
 import org.apache.spark.ui.jobs.JobProgressListener
 import org.apache.spark.ui.storage.StorageListener
 import org.apache.spark.util.collection.OpenHashSet
-
 import org.apache.spark.ui.ExecutorTaskSummaryWrapper
 
 /**
@@ -265,8 +262,79 @@ class SparkDataCollection extends SparkApplicationData {
           stageInfo.outputBytes = data.outputBytes
           stageInfo.shuffleReadBytes = data.shuffleReadTotalBytes
           stageInfo.shuffleWriteBytes = data.shuffleWriteBytes
-          addIntSetToJSet(data.completedIndices, stageInfo.completedIndices)
 
+
+        data.taskData.foreach(inTaskData => {
+          val taskData = new TaskData()
+          val taskMet = new TaskMetrics()
+          val inputMet = new InputMetrics()
+          val shuffleWriteMet = new ShuffleWriteMetrics()
+          val shuffleReadMet = new ShuffleReadMetrics()
+          val id = inTaskData._1
+          val taskInfo = inTaskData._2.taskInfo
+          val taskMetrics = inTaskData._2.metrics.get
+
+          if (taskMetrics.inputMetrics != null) {
+            val inputMetrics = taskMetrics.inputMetrics
+            inputMet.bytesRead = inputMetrics.bytesRead
+//            inputMet.dataReadMethod = inputMetrics.readMethod.toString
+            inputMet.recordsRead = inputMetrics.recordsRead
+            taskMet.inputMetrics = inputMet
+          }
+
+          if (taskMetrics.shuffleReadMetrics != null) {
+            val shuffleReadMetrics = taskMetrics.shuffleReadMetrics
+            shuffleReadMet.remoteBlocksFetched = shuffleReadMetrics.remoteBlocksFetched.toInt
+            shuffleReadMet.localBlocksFetched = shuffleReadMetrics.localBlocksFetched.toInt
+            shuffleReadMet.totalBlocksFetched = shuffleReadMetrics.totalBlocksFetched.toInt
+
+            shuffleReadMet.fetchWaitTime = shuffleReadMetrics.fetchWaitTime
+
+            shuffleReadMet.localBytesRead = shuffleReadMetrics.localBytesRead
+            shuffleReadMet.remoteBytesRead = shuffleReadMetrics.remoteBytesRead
+            shuffleReadMet.recordsRead = shuffleReadMetrics.recordsRead
+            taskMet.shuffleReadMetrics = shuffleReadMet
+          }
+
+          if (taskMetrics.shuffleWriteMetrics != null) {
+            val shuffleWriteMetrics = taskMetrics.shuffleWriteMetrics
+            shuffleWriteMet.bytesWritten = shuffleWriteMetrics.bytesWritten
+            shuffleWriteMet.recordsWritten = shuffleWriteMetrics.recordsWritten
+            shuffleWriteMet.writeTime = shuffleWriteMetrics.writeTime
+            taskMet.shuffleWriteMetrics = shuffleWriteMet
+          }
+
+          taskData.taskId = taskInfo.taskId
+          taskData.index = taskInfo.index
+          taskData.attempt = taskInfo.attemptNumber
+          taskData.launchTime = taskInfo.launchTime
+          taskData.duration = taskInfo.duration
+          taskData.executorId = taskInfo.executorId
+          taskData.host = taskInfo.host
+          taskData.taskLocality = taskInfo.taskLocality.toString
+          taskData.speculative = taskInfo.speculative
+
+          if (taskInfo.finished) {
+            val totalExecutionTime = taskInfo.finishTime - taskInfo.launchTime
+            val executorOverhead =   taskMetrics.executorDeserializeTime + taskMetrics.resultSerializationTime
+            val gettingResultTime = taskInfo.finishTime - taskInfo.gettingResultTime
+            val schedulerDelay = Math.max(0,totalExecutionTime - taskMetrics.executorRunTime - executorOverhead - gettingResultTime)
+            taskMet.schedulerDelay = schedulerDelay
+          }
+
+          taskMet.executorDeserializeTime = taskMetrics.executorDeserializeTime
+          taskMet.executorRunTime = taskMetrics.executorRunTime
+          taskMet.jvmGcTime = taskMetrics.jvmGCTime
+          taskMet.resultSerializationTime = taskMetrics.resultSerializationTime
+          taskMet.resultSize = taskMetrics.resultSize
+          taskMet.memoryBytesSpilled = taskMetrics.memoryBytesSpilled
+          taskMet.diskBytesSpilled = taskMetrics.diskBytesSpilled
+
+          taskData.taskMetrics = taskMet
+
+          stageInfo.tasks.put(id, taskData)
+        })
+        addIntSetToJSet(data.completedIndices, stageInfo.completedIndices)
           _jobProgressData.addStageInfo(id._1, id._2, stageInfo)
       }
 

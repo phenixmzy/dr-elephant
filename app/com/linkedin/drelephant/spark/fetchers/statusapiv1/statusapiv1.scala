@@ -203,6 +203,7 @@ trait ShuffleReadMetrics{
   def localBlocksFetched: Int
   def fetchWaitTime: Long
   def remoteBytesRead: Long
+  var localBytesRead: Long
   def totalBlocksFetched: Int
   def recordsRead: Long}
 
@@ -375,6 +376,7 @@ class TaskDataImpl(
   var index: Int,
   var attempt: Int,
   var launchTime: Date,
+  var duration:Long,
   var executorId: String,
   var host: String,
   var taskLocality: String,
@@ -409,6 +411,7 @@ class ShuffleReadMetricsImpl(
   var localBlocksFetched: Int,
   var fetchWaitTime: Long,
   var remoteBytesRead: Long,
+  var localBytesRead: Long,
   var totalBlocksFetched: Int,
   var recordsRead: Long) extends ShuffleReadMetrics
 

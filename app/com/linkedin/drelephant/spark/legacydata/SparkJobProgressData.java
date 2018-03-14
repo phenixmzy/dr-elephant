@@ -16,13 +16,8 @@
 
 package com.linkedin.drelephant.spark.legacydata;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
@@ -248,7 +243,7 @@ public class SparkJobProgressData {
 
     public String name;
     public String description;
-
+    public Map<Long,TaskData> tasks = new HashMap<Long,TaskData>();
     public double getFailureRate() {
       return SparkJobProgressData.getFailureRate(numCompleteTasks, numFailedTasks);
     }
@@ -265,6 +260,69 @@ public class SparkJobProgressData {
           inputBytes, outputBytes, shuffleReadBytes, shuffleWriteBytes, memoryBytesSpilled, diskBytesSpilled, name,
           description);
     }
+  }
+  public static class TaskData {
+    public long taskId = 0;
+    public int index = 0;
+    public int attempt = 0;
+    public long launchTime;
+    public long duration = 0;
+    public String executorId;
+    public String host;
+    public String taskLocality;
+    public boolean speculative;
+
+    public TaskMetrics taskMetrics;
+  }
+
+  public static class TaskMetrics {
+    public long executorDeserializeTime = 0;
+    public long executorRunTime = 0;
+    public long schedulerDelay = 0;
+    public long resultSize = 0;
+    public long jvmGcTime = 0;
+    public long resultSerializationTime = 0;
+    public long memoryBytesSpilled = 0;
+    public long diskBytesSpilled = 0;
+
+    public InputMetrics inputMetrics;
+    public OutputMetrics outputMetrics;
+    public ShuffleReadMetrics shuffleReadMetrics;
+    public ShuffleWriteMetrics shuffleWriteMetrics;
+  }
+
+  public static class InputMetrics {
+    public String dataReadMethod;
+    public long bytesRead = 0;
+    public long recordsRead = 0;
+  }
+
+  public static class OutputMetrics {
+    public long bytesWritten = 0;
+    public long recordsWritten = 0;
+  }
+
+  public static class ShuffleReadMetrics {
+    public int remoteBlocksFetched = 0;
+    public int localBlocksFetched = 0;
+    public long fetchWaitTime = 0;
+    public long remoteBytesRead = 0;
+    public long localBytesRead = 0;
+    public int totalBlocksFetched = 0;
+    public long recordsRead = 0;
+  }
+
+  public static class ShuffleWriteMetrics {
+    public long bytesWritten = 0;
+    public long writeTime = 0;
+    public long recordsWritten = 0;
+  }
+
+  public static class AccumulableInfo {
+    public long id;
+    public String name;
+    public String update = "";
+    public String value;
   }
 
   private static String getListString(Collection collection) {

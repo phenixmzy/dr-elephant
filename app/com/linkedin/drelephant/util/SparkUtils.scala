@@ -20,11 +20,12 @@ import java.io.{BufferedInputStream, File, FileInputStream, FileNotFoundExceptio
 import java.net.URI
 import java.util.Properties
 
+import org.apache.commons.lang.time.DurationFormatUtils
+
 import scala.collection.JavaConverters
 import scala.collection.mutable.HashMap
-
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{FileSystem, Path, PathFilter, FileStatus}
+import org.apache.hadoop.fs.{FileStatus, FileSystem, Path, PathFilter}
 import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.io.{CompressionCodec, LZ4CompressionCodec, LZFCompressionCodec, SnappyCompressionCodec}
@@ -386,6 +387,14 @@ trait SparkUtils {
 
   private def sanitize(str: String): String = {
     str.replaceAll("[ :/]", "-").replaceAll("[.${}'\"]", "_").toLowerCase
+  }
+
+  def convertTimeMs(timeMs: Long): String = {
+    if (timeMs < 1000) {
+      timeMs.toString + " msec"
+    } else {
+      DurationFormatUtils.formatDuration(timeMs, "HH:mm:ss") + " HH:MM:SS"
+    }
   }
 }
 
