@@ -324,8 +324,8 @@ object StageSkewHeuristic {
 
         if (taskMetrics.shuffleWriteMetrics.nonEmpty) {
           val shuffleWriteMetrics = taskMetrics.shuffleWriteMetrics.get
-          shuffleRecordsWrites = shuffleRecordsReads :+ shuffleWriteMetrics.recordsWritten
-          shuffleBytesWrites = shuffleBytesReads :+ shuffleWriteMetrics.bytesWritten
+          shuffleRecordsWrites = shuffleRecordsWrites :+ shuffleWriteMetrics.recordsWritten
+          shuffleBytesWrites = shuffleBytesWrites :+ shuffleWriteMetrics.bytesWritten
         }
 
       })
