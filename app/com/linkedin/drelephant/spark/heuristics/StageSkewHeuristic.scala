@@ -51,6 +51,7 @@ class StageSkewHeuristic (private val heuristicConfigurationData: HeuristicConfi
           new HeuristicResultDetails(stageId , stageSkewSummaryInfo.stageName + " [" + stageSkewSummaryInfo.severity.toString+"]"),
           new HeuristicResultDetails(stageId + " / Gc ratio high count",stageSkewSummaryInfo.stageGCSummary.get.severityACount.toString),
           new HeuristicResultDetails(stageId + " / Gc ratio low count",stageSkewSummaryInfo.stageGCSummary.get.serverityDCount.toString),
+          new HeuristicResultDetails(stageId + " / Gc count",stageSkewSummaryInfo.stageGCSummary.get.total.toString),
           new HeuristicResultDetails(stageId + " / " + timeSkewSummary.skewName, timeSkewSummary.severity.toString),
           new HeuristicResultDetails(stageId + " / " + timeSkewSummary.skewName + " Time skew (Number of tasks)",stageSkewSummaryInfo.taskTotal.toString),
           new HeuristicResultDetails(stageId + " / " + timeSkewSummary.skewName + " Time skew (Group A)",timeSkewSummary.group1.taskNum + " tasks @ " + sparkUtils.convertTimeMs(timeSkewSummary.group1.avg) + " avg"),
@@ -176,7 +177,7 @@ class StageSkewHeuristic (private val heuristicConfigurationData: HeuristicConfi
   }
 }
 
-case class StageGCSummary(severityACount : Int, serverityDCount : Int)
+case class StageGCSummary(severityACount : Int, serverityDCount : Int, total : Int)
 case class StageSkewGroupValue(taskNum:Long, avg:Long)
 case class StageSkewSummaryDetail(skewName:String, group1:StageSkewGroupValue, group2:StageSkewGroupValue, severity:Severity)
 case class StageSkewSummaryInfo(stageName:String, stageId:Int, taskTotal:Long,
@@ -237,7 +238,7 @@ object StageSkewHeuristic {
           totalSeverityD += 1
         }
       })
-      new StageGCSummary(totalSeverityA, totalSeverityD)
+      new StageGCSummary(totalSeverityA, totalSeverityD,gcRatios.size)
     }
 
     def getStageSkewSeverity(stageSkewList:Seq[StageSkewSummaryInfo]) : Severity = {
