@@ -139,6 +139,7 @@ object LegacyDataConverters {
         val taskMetricsImpl = new TaskMetricsImpl(
           taskMet.executorDeserializeTime,
           taskMet.executorRunTime,
+          taskMet.schedulerDelay,
           taskMet.resultSize,
           taskMet.jvmGcTime,
           taskMet.resultSerializationTime,

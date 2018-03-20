@@ -169,6 +169,7 @@ trait TaskData{
   def index: Int
   def attempt: Int
   def launchTime: Date
+  def duration: Long
   def executorId: String
   def host: String
   def taskLocality: String
@@ -180,6 +181,7 @@ trait TaskData{
 trait TaskMetrics{
   def executorDeserializeTime: Long
   def executorRunTime: Long
+  def schedulerDelay: Long
   def resultSize: Long
   def jvmGcTime: Long
   def resultSerializationTime: Long
@@ -388,6 +390,7 @@ class TaskDataImpl(
 class TaskMetricsImpl(
   var executorDeserializeTime: Long,
   var executorRunTime: Long,
+  var schedulerDelay: Long,
   var resultSize: Long,
   var jvmGcTime: Long,
   var resultSerializationTime: Long,

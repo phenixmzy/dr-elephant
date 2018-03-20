@@ -208,4 +208,10 @@
     <classname>com.linkedin.drelephant.spark.heuristics.StageSkewHeuristic</classname>
     <viewname>views.html.help.spark.helpExecutorGcHeuristic</viewname>
   </heuristic>
+  <heuristic>
+    <applicationtype>spark</applicationtype>
+    <heuristicname>Spark Stage Parallel</heuristicname>
+    <classname>com.linkedin.drelephant.spark.heuristics.StageParallelHeuristic</classname>
+    <viewname>views.html.help.spark.helpSparkSkewHeuristic</viewname>
+  </heuristic>
 </heuristics>

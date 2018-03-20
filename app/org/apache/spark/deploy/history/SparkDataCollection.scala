@@ -314,6 +314,12 @@ class SparkDataCollection extends SparkApplicationData {
           taskData.taskLocality = taskInfo.taskLocality.toString
           taskData.speculative = taskInfo.speculative
 
+          val totalExecutionTime = taskInfo.finishTime - taskInfo.launchTime
+          val executorOverhead =   taskMetrics.executorDeserializeTime + taskMetrics.resultSerializationTime
+
+          val schedulerDelay = Math.max(0,totalExecutionTime - taskMetrics.executorRunTime - executorOverhead)
+          taskMet.schedulerDelay = schedulerDelay
+
           if (taskInfo.finished) {
             val totalExecutionTime = taskInfo.finishTime - taskInfo.launchTime
             val executorOverhead =   taskMetrics.executorDeserializeTime + taskMetrics.resultSerializationTime
