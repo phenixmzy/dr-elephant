@@ -69,9 +69,6 @@ object StageParallelHeuristic{
         if (stageData.status == StageStatus.COMPLETE) {
           val taskNum = stageData.tasks.get.size
           val durationSum : Long = stageData.tasks.get.mapValues(taskData => taskData.duration).values.sum
-          var taskCount = 0
-          stageData.tasks.get.foreach(_ => taskCount += 1)
-          logger.info("stageData.tasks.get.size = " + stageData.tasks.get.size + " taskCount="+taskCount )
           val schedulerDelaySum : Long = stageData.tasks.get.mapValues(taskData => taskData.taskMetrics.get.schedulerDelay).values.sum
           val ratio : Double = schedulerDelaySum.toDouble / durationSum.toDouble
           val avgSchedulerDelay = schedulerDelaySum.toDouble / taskNum.toDouble

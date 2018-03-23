@@ -24,6 +24,7 @@ import com.linkedin.drelephant.analysis.ApplicationType
 import com.linkedin.drelephant.spark.legacydata._
 import com.linkedin.drelephant.spark.legacydata.SparkExecutorData.ExecutorInfo
 import com.linkedin.drelephant.spark.legacydata.SparkJobProgressData._
+import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.scheduler.{ApplicationEventListener, ReplayListenerBus, StageInfo}
 import org.apache.spark.storage.{RDDInfo, StorageStatus, StorageStatusListener, StorageStatusTrackingListener}
@@ -78,7 +79,6 @@ class SparkDataCollection extends SparkApplicationData {
   override def getGeneralData(): SparkGeneralData = {
     if (_applicationData == null) {
       _applicationData = new SparkGeneralData()
-
       applicationEventListener.adminAcls match {
         case Some(s: String) => {
           _applicationData.setAdminAcls(stringToSet(s))
@@ -308,7 +308,7 @@ class SparkDataCollection extends SparkApplicationData {
           taskData.index = taskInfo.index
           taskData.attempt = taskInfo.attemptNumber
           taskData.launchTime = taskInfo.launchTime
-          taskData.duration = taskInfo.duration
+          taskData.duration = taskInfo.finishTime - taskInfo.launchTime
           taskData.executorId = taskInfo.executorId
           taskData.host = taskInfo.host
           taskData.taskLocality = taskInfo.taskLocality.toString
@@ -389,6 +389,7 @@ class SparkDataCollection extends SparkApplicationData {
 
 object SparkDataCollection {
   private val APPLICATION_TYPE = new ApplicationType("SPARK")
+  var logger = Logger.getLogger(classOf[SparkDataCollection])
 
   def stringToSet(str: String): JSet[String] = {
     val set = new JHashSet[String]()

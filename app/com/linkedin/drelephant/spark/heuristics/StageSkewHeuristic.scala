@@ -60,7 +60,7 @@ class StageSkewHeuristic (private val heuristicConfigurationData: HeuristicConfi
 
         if (stageSkewSummaryInfo.inputBytesSkewSummary.nonEmpty) {
           val inputBytesSkewSummary = stageSkewSummaryInfo.inputBytesSkewSummary.get
-          if (inputBytesSkewSummary.group1.taskNum > 0 || inputBytesSkewSummary.group2.taskNum >0) {
+          if (isDisplayItem(inputBytesSkewSummary.group1.taskNum,inputBytesSkewSummary.group2.taskNum,inputBytesSkewSummary.group1.avg,inputBytesSkewSummary.group2.avg)) {
             val inputBytesSkewDetails = Seq(
               new HeuristicResultDetails(stageId + " / " + inputBytesSkewSummary.skewName,inputBytesSkewSummary.severity.toString),
               new HeuristicResultDetails(stageId + " / " + inputBytesSkewSummary.skewName + " Data skew (Number of tasks)",stageSkewSummaryInfo.taskTotal.toString),
@@ -73,7 +73,7 @@ class StageSkewHeuristic (private val heuristicConfigurationData: HeuristicConfi
 
         if (stageSkewSummaryInfo.inputRecordsSkewSummary.nonEmpty) {
           val recordsSkewSummary = stageSkewSummaryInfo.inputRecordsSkewSummary.get
-          if (recordsSkewSummary.group1.taskNum > 0 || recordsSkewSummary.group2.taskNum >0) {
+          if (isDisplayItem(recordsSkewSummary.group1.taskNum,recordsSkewSummary.group2.taskNum,recordsSkewSummary.group1.avg,recordsSkewSummary.group2.avg)) {
             val recordsSkewDetails = Seq(
               new HeuristicResultDetails(stageId + " / " + recordsSkewSummary.skewName,recordsSkewSummary.severity.toString),
               new HeuristicResultDetails(stageId + " / " + recordsSkewSummary.skewName + " Data skew (Number of tasks)",stageSkewSummaryInfo.taskTotal.toString),
@@ -151,7 +151,7 @@ class StageSkewHeuristic (private val heuristicConfigurationData: HeuristicConfi
 
   def isDisplayItem(taskNum1:Long, taskNum2:Long, avg1:Double, avg2:Double): Boolean = {
     if (avg1 == 0 && avg2 == 0) return false
-    if (taskNum1 == 0 && taskNum2 ==0) return false
+    if (taskNum1 + taskNum2 < 2) return false
     true
   }
 
@@ -200,6 +200,7 @@ object StageSkewHeuristic {
   var numTasksLimits : Array[Double] = Array(10, 50, 100, 200) // Number of map or reduce tasks
   var deviationLimits : Array[Double] = Array(2, 4, 8, 16) // Deviation in i/p bytes btw 2 groups
   var filesLimits : Array[Double] = Array(1d / 8, 1d / 4, 1d / 2, 1d) // Fraction of HDFS Block Size
+
 
   /** The ascending severity thresholds for the ratio of JVM GC Time and Task Run Time (checking whether ratio is above normal)
     * These thresholds are experimental and are likely to change */
