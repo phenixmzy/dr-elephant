@@ -206,7 +206,7 @@
     <applicationtype>spark</applicationtype>
     <heuristicname>Spark Stage Skew</heuristicname>
     <classname>com.linkedin.drelephant.spark.heuristics.StageSkewHeuristic</classname>
-    <viewname>views.html.help.spark.helpExecutorGcHeuristic</viewname>
+    <viewname>views.html.help.spark.helpSparkSkewHeuristic</viewname>
   </heuristic>
   <heuristic>
     <applicationtype>spark</applicationtype>
