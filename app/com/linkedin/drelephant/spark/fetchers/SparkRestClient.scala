@@ -79,6 +79,23 @@ class SparkRestClient(sparkConf: SparkConf) {
     implicit ec: ExecutionContext
   ): Future[SparkRestDerivedData] = {
     val (applicationInfo, attemptTarget) = getApplicationMetaData(appId)
+    /*
+    async {
+      val futureJobDatas = async { getJobDatas(attemptTarget) }
+      val futureStageDatas = async { getStageDatas(attemptTarget) }
+      val futureExecutorSummaries = async { getExecutorSummaries(attemptTarget) }
+      val futureLogData = if (fetchLogs) {
+        async { getLogData(attemptTarget)}
+      } else Future.successful(None)
+
+      SparkRestDerivedData(
+        applicationInfo,
+        await(futureJobDatas),
+        await(futureStageDatas),
+        await(futureExecutorSummaries),
+        await(futureLogData)
+      )
+    }*/
 
     Future{
       blocking{

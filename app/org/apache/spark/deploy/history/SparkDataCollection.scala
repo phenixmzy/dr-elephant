@@ -77,6 +77,7 @@ class SparkDataCollection extends SparkApplicationData {
   override def isEmpty(): Boolean = !isThrottled() && getExecutorData().getExecutors.isEmpty()
 
   override def getGeneralData(): SparkGeneralData = {
+
     if (_applicationData == null) {
       _applicationData = new SparkGeneralData()
       applicationEventListener.adminAcls match {
@@ -136,9 +137,11 @@ class SparkDataCollection extends SparkApplicationData {
       applicationEventListener.endTime match {
         case Some(s: Long) => {
           _applicationData.setEndTime(s)
+          logger.info("appid="+_applicationData.getApplicationId +", startTime=" + _applicationData.getStartTime + ", endTime=" + _applicationData.getEndTime)
         }
         case None => {
           // do nothing
+          logger.info("appid="+_applicationData.getApplicationId +", startTime=" + _applicationData.getStartTime + ", endTime=None")
         }
       }
     }

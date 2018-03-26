@@ -151,7 +151,7 @@ class StageSkewHeuristic (private val heuristicConfigurationData: HeuristicConfi
 
   def isDisplayItem(taskNum1:Long, taskNum2:Long, avg1:Double, avg2:Double): Boolean = {
     if (avg1 == 0 && avg2 == 0) return false
-    if (taskNum1 + taskNum2 < 2) return false
+    if ((taskNum1 + taskNum2) < 2) return false
     true
   }
 
@@ -352,6 +352,7 @@ object StageSkewHeuristic {
     severityTime = Severity.min(severityTime, Severity.getSeverityAscending(groupsTime(0).length, numTasksLimits(0), numTasksLimits(1), numTasksLimits(2), numTasksLimits(3)))
     val group1 = new StageSkewGroupValue(groupsTime(0).length,timeAvg1)
     val group2 = new StageSkewGroupValue(groupsTime(1).length,timeAvg2)
+    if (timeTaken.size <= 1) severityTime = Severity.NONE
     new StageSkewSummaryDetail("time skew", group1,group2,severityTime)
   }
 
@@ -371,6 +372,7 @@ object StageSkewHeuristic {
     }
     val group1 = new StageSkewGroupValue(groups(0).length,avg1)
     val group2 = new StageSkewGroupValue(groups(1).length,avg2)
+    if (inputBytesOrrecords.size <= 1) severityData = Severity.NONE
     new StageSkewSummaryDetail(skewName, group1,group2,severityData)
   }
 
