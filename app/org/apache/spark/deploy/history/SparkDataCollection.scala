@@ -277,6 +277,7 @@ class SparkDataCollection extends SparkApplicationData {
           val taskInfo = inTaskData._2.taskInfo
           val taskMetrics = inTaskData._2.metrics.get
 
+
           if (taskMetrics.inputMetrics != null) {
             val inputMetrics = taskMetrics.inputMetrics
             inputMet.bytesRead = inputMetrics.bytesRead
