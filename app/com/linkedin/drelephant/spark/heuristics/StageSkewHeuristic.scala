@@ -75,7 +75,7 @@ class StageSkewHeuristic (private val heuristicConfigurationData: HeuristicConfi
           val recordsSkewSummary = stageSkewSummaryInfo.inputRecordsSkewSummary.get
           if (isDisplayItem(recordsSkewSummary.group1.taskNum,recordsSkewSummary.group2.taskNum,recordsSkewSummary.group1.avg,recordsSkewSummary.group2.avg)) {
             val recordsSkewDetails = Seq(
-              new HeuristicResultDetails(stageId + " / " + recordsSkewSummary.skewName,recordsSkewSummary.severity.toString),
+              //new HeuristicResultDetails(stageId + " / " + recordsSkewSummary.skewName,recordsSkewSummary.severity.toString),
               new HeuristicResultDetails(stageId + " / " + recordsSkewSummary.skewName + " Data skew (Number of tasks)",stageSkewSummaryInfo.taskTotal.toString),
               new HeuristicResultDetails(stageId + " / " + recordsSkewSummary.skewName + " Data skew (Group A)",recordsSkewSummary.group1.taskNum + " tasks @ " + recordsSkewSummary.group1.avg + " avg"),
               new HeuristicResultDetails(stageId + " / " + recordsSkewSummary.skewName + " Data skew (Group B)",recordsSkewSummary.group2.taskNum + " tasks @ " + recordsSkewSummary.group2.avg + " avg")
@@ -101,8 +101,8 @@ class StageSkewHeuristic (private val heuristicConfigurationData: HeuristicConfi
           val shuffleReadRecordsSkewSummary = stageSkewSummaryInfo.shuffleReadRecordsSkewSummary.get
           if (isDisplayItem(shuffleReadRecordsSkewSummary.group1.taskNum, shuffleReadRecordsSkewSummary.group2.taskNum,shuffleReadRecordsSkewSummary.group1.avg, shuffleReadRecordsSkewSummary.group2.avg)) {
             val shuffleReadRecordsSkewDetails = Seq(
-              new HeuristicResultDetails(stageId + " / " + shuffleReadRecordsSkewSummary.skewName,shuffleReadRecordsSkewSummary.severity.toString),
-              new HeuristicResultDetails(stageId + " / " + shuffleReadRecordsSkewSummary.skewName + " Data skew (Number of tasks)",stageSkewSummaryInfo.taskTotal.toString),
+              //new HeuristicResultDetails(stageId + " / " + shuffleReadRecordsSkewSummary.skewName,shuffleReadRecordsSkewSummary.severity.toString),
+              //new HeuristicResultDetails(stageId + " / " + shuffleReadRecordsSkewSummary.skewName + " Data skew (Number of tasks)",stageSkewSummaryInfo.taskTotal.toString),
               new HeuristicResultDetails(stageId + " / " + shuffleReadRecordsSkewSummary.skewName + " Data skew (Group A)",shuffleReadRecordsSkewSummary.group1.taskNum + " tasks @ " + shuffleReadRecordsSkewSummary.group1.avg + " avg"),
               new HeuristicResultDetails(stageId + " / " + shuffleReadRecordsSkewSummary.skewName + " Data skew (Group B)",shuffleReadRecordsSkewSummary.group2.taskNum + " tasks @ " + shuffleReadRecordsSkewSummary.group2.avg + " avg")
             )
@@ -127,8 +127,8 @@ class StageSkewHeuristic (private val heuristicConfigurationData: HeuristicConfi
           val shuffleWriteRecordsSkewSummary = stageSkewSummaryInfo.shuffleWriteRecordsSkewSummary.get
           if (isDisplayItem(shuffleWriteRecordsSkewSummary.group1.taskNum, shuffleWriteRecordsSkewSummary.group2.taskNum,shuffleWriteRecordsSkewSummary.group1.avg, shuffleWriteRecordsSkewSummary.group2.avg)) {
             val shuffleWriteRecordsSkewDetails = Seq(
-              new HeuristicResultDetails(stageId + " / " + shuffleWriteRecordsSkewSummary.skewName,shuffleWriteRecordsSkewSummary.severity.toString),
-              new HeuristicResultDetails(stageId + " / " + shuffleWriteRecordsSkewSummary.skewName + " Data skew (Number of tasks)",stageSkewSummaryInfo.taskTotal.toString),
+              //new HeuristicResultDetails(stageId + " / " + shuffleWriteRecordsSkewSummary.skewName,shuffleWriteRecordsSkewSummary.severity.toString),
+              //new HeuristicResultDetails(stageId + " / " + shuffleWriteRecordsSkewSummary.skewName + " Data skew (Number of tasks)",stageSkewSummaryInfo.taskTotal.toString),
               new HeuristicResultDetails(stageId + " / " + shuffleWriteRecordsSkewSummary.skewName + " Data skew (Group A)",shuffleWriteRecordsSkewSummary.group1.taskNum + " tasks @ " + shuffleWriteRecordsSkewSummary.group1.avg + " avg"),
               new HeuristicResultDetails(stageId + " / " + shuffleWriteRecordsSkewSummary.skewName + " Data skew (Group B)",shuffleWriteRecordsSkewSummary.group2.taskNum + " tasks @ " + shuffleWriteRecordsSkewSummary.group2.avg + " avg")
             )
@@ -267,11 +267,8 @@ object StageSkewHeuristic {
           val shuffleReadRecordsSkewDetail = getStageDataSkewSeverityDetail(shuffleRecordsReads,"shuffle read records",false)
           val shuffleWriteRecordsSkewDetail = getStageDataSkewSeverityDetail(shuffleRecordsWrites,"shuffle write records",false)
 
-          val severity = Severity.max(inputBytesSkewDetail.severity, inputRecordsSkewDetail.severity,
-            timeSkewDetail.severity,
-            shuffleReadBytesSkewDetail.severity, shuffleWriteBytesSkewDetail.severity,
-            shuffleReadRecordsSkewDetail.severity, shuffleWriteRecordsSkewDetail.severity
-          )
+          val severity = Severity.max(inputBytesSkewDetail.severity, timeSkewDetail.severity,
+            shuffleReadBytesSkewDetail.severity, shuffleWriteBytesSkewDetail.severity)
           val summary:StageSkewSummaryInfo = new StageSkewSummaryInfo(stageData.name, stageData.stageId, stageData.tasks.get.size,
             Some(inputBytesSkewDetail), Some(inputRecordsSkewDetail),
             Some(shuffleReadBytesSkewDetail), Some(shuffleReadRecordsSkewDetail),
