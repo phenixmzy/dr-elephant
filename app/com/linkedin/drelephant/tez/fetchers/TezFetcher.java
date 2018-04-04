@@ -55,6 +55,7 @@ public class TezFetcher implements ElephantFetcher<TezApplicationData> {
 
     //Connection validity checked using method verifyURL(_timelineWebAddr) inside URLFactory constructor;
     _urlFactory = new URLFactory(applicationHistoryAddr);
+    logger.info(TIMELINE_SERVER_URL + ":" + applicationHistoryAddr);
     logger.info("Connection success.");
 
     _jsonFactory = new JSONFactory();

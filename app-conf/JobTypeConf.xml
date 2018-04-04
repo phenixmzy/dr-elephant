@@ -74,4 +74,10 @@
     <conf>mapred.child.java.opts</conf>
     <isDefault/>
   </jobType>
+  <jobType>
+    <name>Tez</name>
+    <applicationtype>tez</applicationtype>
+    <conf>hive.mapred.mode</conf>
+    <isDefault/>
+  </jobType>
 </jobTypes>
