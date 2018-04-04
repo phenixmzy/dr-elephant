@@ -108,4 +108,8 @@
     </params>
   </fetcher>
   -->
+  <fetcher>
+    <applicationtype>tez</applicationtype>
+    <classname>com.linkedin.drelephant.tez.fetchers.TezFetcher</classname>
+  </fetcher>
 </fetchers>
