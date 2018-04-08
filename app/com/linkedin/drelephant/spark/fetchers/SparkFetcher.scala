@@ -18,7 +18,7 @@ package com.linkedin.drelephant.spark.fetchers
 
 import java.util.concurrent.TimeoutException
 
-import scala.concurrent.{Await, ExecutionContext, Future, blocking}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.{Duration, SECONDS}
 import scala.util.{Failure, Success, Try}
 import com.linkedin.drelephant.analysis.{AnalyticJob, ElephantFetcher}
@@ -110,7 +110,6 @@ class SparkFetcher(fetcherConfigurationData: FetcherConfigurationData)
   }
 
   private def doFetchDataUsingRestAndLogClients(analyticJob: AnalyticJob): Future[SparkApplicationData] = Future {
-    blocking {
       val appId = analyticJob.getAppId
       val restDerivedData = Await.result(sparkRestClient.fetchData(appId, eventLogSource == EventLogSource.Rest), DEFAULT_TIMEOUT)
 
@@ -123,11 +122,8 @@ class SparkFetcher(fetcherConfigurationData: FetcherConfigurationData)
           }.attemptId
           Some(Await.result(sparkLogClient.fetchData(appId, lastAttemptId), DEFAULT_TIMEOUT))
       }
-
       SparkApplicationData(appId, restDerivedData, logDerivedData)
-    }
   }
-
 }
 
 object SparkFetcher {
