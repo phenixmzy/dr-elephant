@@ -5,6 +5,7 @@ import com.linkedin.drelephant.spark.fetchers.statusapiv1._
 import com.linkedin.drelephant.analysis._
 import com.linkedin.drelephant.configurations.heuristic.HeuristicConfigurationData
 import com.linkedin.drelephant.spark.data.SparkApplicationData
+import com.linkedin.drelephant.util.SparkUtils
 
 import scala.collection.JavaConverters
 /**
@@ -15,6 +16,8 @@ class ExecutorGcHeuristic(private val heuristicConfigurationData: HeuristicConfi
 
   import ExecutorGcHeuristic._
   import JavaConverters._
+
+  protected lazy val sparkUtils: SparkUtils = SparkUtils
 
   val gcSeverityAThresholds: SeverityThresholds =
     SeverityThresholds.parse(heuristicConfigurationData.getParamMap.get(GC_SEVERITY_A_THRESHOLDS_KEY), ascending = true)
@@ -30,8 +33,8 @@ class ExecutorGcHeuristic(private val heuristicConfigurationData: HeuristicConfi
     val evaluator = new Evaluator(this, data)
     var resultDetails = Seq(
       new HeuristicResultDetails("GC time to Executor Run time ratio", evaluator.ratio.toString),
-      new HeuristicResultDetails("Total GC time", evaluator.jvmTime.toString),
-      new HeuristicResultDetails("Total Executor Runtime", evaluator.executorRunTimeTotal.toString)
+      new HeuristicResultDetails("Total GC time", sparkUtils.convertTimeMs(evaluator.jvmTime)),
+      new HeuristicResultDetails("Total Executor Runtime", sparkUtils.convertTimeMs(evaluator.executorRunTimeTotal))
     )
 
     //adding recommendations to the result, severityTimeA corresponds to the ascending severity calculation

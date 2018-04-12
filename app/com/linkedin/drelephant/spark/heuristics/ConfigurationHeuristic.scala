@@ -25,7 +25,7 @@ import scala.util.Try
 import com.linkedin.drelephant.analysis._
 import com.linkedin.drelephant.configurations.heuristic.HeuristicConfigurationData
 import com.linkedin.drelephant.spark.data.SparkApplicationData
-import com.linkedin.drelephant.util.MemoryFormatUtils
+import com.linkedin.drelephant.util.{MemoryFormatUtils, SparkUtils}
 
 
 /**
@@ -38,6 +38,7 @@ class ConfigurationHeuristic(private val heuristicConfigurationData: HeuristicCo
     extends Heuristic[SparkApplicationData] {
   import ConfigurationHeuristic._
   import JavaConverters._
+  protected lazy val sparkUtils: SparkUtils = SparkUtils
   val sparkOverheadMemoryThreshold: SeverityThresholds = SeverityThresholds.parse(heuristicConfigurationData.getParamMap.get(SPARK_OVERHEAD_MEMORY_THRESHOLD_KEY), ascending = true)
     .getOrElse(DEFAULT_SPARK_OVERHEAD_MEMORY_THRESHOLDS)
 
@@ -72,7 +73,7 @@ class ConfigurationHeuristic(private val heuristicConfigurationData: HeuristicCo
       ),
       new HeuristicResultDetails(
         SPARK_APPLICATION_DURATION,
-        evaluator.applicationDuration.toString + " Seconds"
+        evaluator.applicationDuration.toString +" Seconds"
       ),
       new HeuristicResultDetails(
         SPARK_DYNAMIC_ALLOCATION_ENABLED,
