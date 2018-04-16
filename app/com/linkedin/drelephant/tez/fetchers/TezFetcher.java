@@ -34,7 +34,7 @@ import java.net.URLConnection;
 import java.util.*;
 
 /**
- * Task level data mining for Tez Tasks from timeline server API
+ * 从timeline server中拉取,挖掘tez任务诊断.
  */
 
 public class TezFetcher implements ElephantFetcher<TezApplicationData> {
