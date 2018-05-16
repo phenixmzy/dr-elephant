@@ -279,7 +279,6 @@ class SparkDataCollection extends SparkApplicationData {
           val taskInfo = inTaskData._2.taskInfo
           val taskMetrics = inTaskData._2.metrics.get
 
-
           if (taskMetrics.inputMetrics != null) {
             val inputMetrics = taskMetrics.inputMetrics
             inputMet.bytesRead = inputMetrics.bytesRead
@@ -341,7 +340,6 @@ class SparkDataCollection extends SparkApplicationData {
           taskMet.resultSize = taskMetrics.resultSize
           taskMet.memoryBytesSpilled = taskMetrics.memoryBytesSpilled
           taskMet.diskBytesSpilled = taskMetrics.diskBytesSpilled
-
           taskData.taskMetrics = taskMet
 
           stageInfo.tasks.put(id, taskData)
@@ -383,7 +381,6 @@ class SparkDataCollection extends SparkApplicationData {
     }
     _sparkSQLData
   }
-
 
   override def getAppId: String = {
     getGeneralData().getApplicationId
