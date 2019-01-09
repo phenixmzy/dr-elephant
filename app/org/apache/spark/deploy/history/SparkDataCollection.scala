@@ -34,7 +34,7 @@ import org.apache.spark.ui.jobs.JobProgressListener
 import org.apache.spark.ui.storage.StorageListener
 import org.apache.spark.util.collection.OpenHashSet
 import org.apache.spark.ui.ExecutorTaskSummaryWrapper
-
+import org.apache.spark.sql.execution.ui.SQLListener
 /**
  * This class wraps the logic of collecting the data in SparkEventListeners into the
  * HadoopApplicationData instances.
@@ -52,6 +52,7 @@ class SparkDataCollection extends SparkApplicationData {
   lazy val storageStatusListener = new StorageStatusListener(sparkConf)
   lazy val executorsListener = new ExecutorsListener(storageStatusListener, sparkConf)
   lazy val storageListener = new StorageListener(storageStatusListener)
+  lazy val sqlListener = new SQLListener(sparkConf)
 
   // This is a customized listener that tracks peak used memory
   // The original listener only tracks the current in use memory which is useless in offline scenario.
@@ -62,6 +63,7 @@ class SparkDataCollection extends SparkApplicationData {
   private var _environmentData: SparkEnvironmentData = null;
   private var _executorData: SparkExecutorData = null;
   private var _storageData: SparkStorageData = null;
+  private var _sparkSQLData: SparkSQLData = null;
   private var _isThrottled: Boolean = false;
 
   def throttle(): Unit = {
@@ -192,7 +194,8 @@ class SparkDataCollection extends SparkApplicationData {
         info.shuffleRead = executorTaskSummary.shuffleRead(info.execId)
         info.shuffleWrite = executorTaskSummary.shuffleWrite(info.execId)
 
-        /*info.activeTasks = executorsListener.executorToTasksActive.getOrElse(info.execId, 0)
+        /* for v-spark-1.x api
+        info.activeTasks = executorsListener.executorToTasksActive.getOrElse(info.execId, 0)
         info.failedTasks = executorsListener.executorToTasksFailed.getOrElse(info.execId, 0)
         info.completedTasks = executorsListener.executorToTasksComplete.getOrElse(info.execId, 0)
         info.totalTasks = info.activeTasks + info.failedTasks + info.completedTasks
@@ -200,7 +203,7 @@ class SparkDataCollection extends SparkApplicationData {
         info.inputBytes = executorsListener.executorToInputBytes.getOrElse(info.execId, 0L)
         info.shuffleRead = executorsListener.executorToShuffleRead.getOrElse(info.execId, 0L)
         info.shuffleWrite = executorsListener.executorToShuffleWrite.getOrElse(info.execId, 0L)
-*/
+        */
         _executorData.setExecutorInfo(info.execId, info)
       }
     }
@@ -266,7 +269,6 @@ class SparkDataCollection extends SparkApplicationData {
           stageInfo.shuffleReadBytes = data.shuffleReadTotalBytes
           stageInfo.shuffleWriteBytes = data.shuffleWriteBytes
 
-
         data.taskData.foreach(inTaskData => {
           val taskData = new TaskData()
           val taskMet = new TaskMetrics()
@@ -276,7 +278,6 @@ class SparkDataCollection extends SparkApplicationData {
           val id = inTaskData._1
           val taskInfo = inTaskData._2.taskInfo
           val taskMetrics = inTaskData._2.metrics.get
-
 
           if (taskMetrics.inputMetrics != null) {
             val inputMetrics = taskMetrics.inputMetrics
@@ -339,7 +340,6 @@ class SparkDataCollection extends SparkApplicationData {
           taskMet.resultSize = taskMetrics.resultSize
           taskMet.memoryBytesSpilled = taskMetrics.memoryBytesSpilled
           taskMet.diskBytesSpilled = taskMetrics.diskBytesSpilled
-
           taskData.taskMetrics = taskMet
 
           stageInfo.tasks.put(id, taskData)
@@ -374,6 +374,14 @@ class SparkDataCollection extends SparkApplicationData {
     _storageData
   }
 
+  def getSQLData(): SparkSQLData = {
+    if (_sparkSQLData == null) {
+      _sparkSQLData = new SparkSQLData()
+      sqlListener.stageIdToStageMetrics.map(kv => (kv._1.toInt,kv._2.stageAttemptId.toInt)).foreach( id => _sparkSQLData.addCompletedStages(id._1,id._2))
+    }
+    _sparkSQLData
+  }
+
   override def getAppId: String = {
     getGeneralData().getApplicationId
   }
@@ -387,6 +395,7 @@ class SparkDataCollection extends SparkApplicationData {
     replayBus.addListener(executorsListener)
     replayBus.addListener(storageListener)
     replayBus.addListener(storageStatusTrackingListener)
+    replayBus.addListener(sqlListener)
     replayBus.replay(in, sourceName, maybeTruncated = false)
   }
 }

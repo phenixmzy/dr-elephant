@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.TimeZone;
+import com.linkedin.drelephant.util.ThreadContextMR2;
 
 public class MapReduceFSFetcherHadoop2Test {
 
