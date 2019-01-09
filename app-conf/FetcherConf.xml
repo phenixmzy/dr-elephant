@@ -58,7 +58,8 @@
     <params>
       <sampling_enabled>false</sampling_enabled>
       <history_log_size_limit_in_mb>500</history_log_size_limit_in_mb>
-      <history_server_time_zone>Asia/Chongqing</history_server_time_zone>
+      <!--<history_server_time_zone>Asia/Chongqing</history_server_time_zone>-->
+      <history_server_time_zone>Asia/Shanghai</history_server_time_zone>
     </params>
   </fetcher>
   
